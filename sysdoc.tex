@@ -96,6 +96,11 @@ lxc-stop -n name
 lxc-attach -n name
 sudo lxc-list
 L'IP du container se trouve dans le proc de du container
+\begin{verbatim}
+  $ IP=$(awk -F'[ \t;]*'  '/fixed-address/ {IP=$3;} END {print IP;}' \
+		 /var/lib/lxc/$VM_CONTAINER/rootfs/var/lib/dhcp/dhclient.eth0.leases)
+  $ lxc-info -n $VM_CONTAINER
+\end{verbatim}
 
 
 \paragraph{}
@@ -108,11 +113,12 @@ Plugins à installer
 
 \subsection{RestAPI}
 \paragraph{}
-Pour lancer un job en le REST API, il faut générer un POST user:token@IP/job/MYJOB/buildWithParameters?PARAMETER=Value
+Pour lancer un job en REST API :  POST user:token@IP/job/MYJOB/buildWithParameters? \ 
+   PARAMETER=Value\&PARAMETER=Value
 
 \section{Divers}\label{divers}
 \paragraph{}
-Les commandes suivantes sont répértoriées en guise de pense bête :
+Les commandes suivantes sont listées pour pense bête :
 \begin{itemize}
   \item tee : écrit en sortie ce qu'il a récupéré en entrée : echo "hello" | tee out.txt > /dev/null
   \item sudo for ever : sudo bash
