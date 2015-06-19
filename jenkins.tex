@@ -1,0 +1,225 @@
+%\documentclass[a4paper,12pt]{article}
+\documentclass{article}
+
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}  
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{pdfpages}
+%\usepackage{ifpdf}
+%\ifpdf %-- si pdflatex
+%  \usepackage[pdftex,colorlinks=true,urlcolor=blue,pdfstartview=FitH]{hyperref}
+%  \DeclareGraphicsExtensions{.pdf,.pdftext,.png,.jpg}
+%  \pdfcompresslevel=9
+%\else %-- si latex
+%  \DeclareGraphicsExtensions{.eps,.ps,.pst}
+%\fi
+
+
+
+\title{Jenkins\\implémentation, configuration, mise en oeuvre}
+%\author{Nicolas Vacelet}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+%\begin{abstract}
+%    \centering Implémentation, configuration, mise en place
+%\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+\paragraph{}
+Jenkins est un outil open source de déploiement automatique. Cet outil peut être utilisé de différentes manières : pour la compilation de code, la mise en place d'environnements de test, le déploiement de logiciels, ...\\
+
+\paragraph{}
+ Dans le cadre de la compilation croisée Ausy, Jenkins a été choisi pour mener les actions suivantes : 
+ \begin{itemize}
+  \item la mise en place d'environnements de test relatifs aux plateformes de développement (ios, android,...)
+  \item la récupération du code et le déploiement dans l'environment de test
+  \item la compilation du code
+  \item et enfin l'analyse du code\\
+\end{itemize}
+
+\paragraph{}
+Les paragraphes suivants couvrent l'implémentation de l'outil (section \ref{implémentation}), 
+    sa configuration (section \ref{configuration}), 
+    et la mise en oeuvre de la compilation croisée (section \ref{mise en oeuvre}). 
+    La dernière partie décrit le REST API de Jenkins (section \ref{Rest API}).\\
+
+\paragraph{}
+Prérequis : les procédures suivantes supposent que la machine hôte est de type Linux, 
+		que la machine dispose d'une connexion internet, 
+		que le sysadmin dispose des droits d'administration.\\
+
+\paragraph{}
+A savoir également que cette documentation a été rédigée à partir de ubuntu version 12.04, et de Jenkins version 1.614.\\
+
+
+\section{Implémentation}\label{implémentation}
+\paragraph{}
+L'implémentation de Jenkins est somme toute aisée. Elle nécessite l'importation de la clé de sécurité et la mise à jour du repo source. Pour terminer \textit{apt-get install} est lancé :
+
+\paragraph{}
+
+\begin{verbatim}
+  $ wget -q -O - http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key | sudo apt-key add -
+  $ sudo echo deb http://pkg.jenkins-ci.org/debian binary/ % 
+    > /etc/apt/sources.list.d/jenkins.list
+  $ sudo apt-get update
+  $ sudo apt-get install jenkins
+\end{verbatim}
+
+\paragraph{}
+Le fonctionnement de Jenkins se vérifie dans \textit{/var/log/jenkins/jenkins.log}.\\
+Jenkins dans sa version 1.614 require au minimum Java 7. \\
+\begin{verbatim}
+  $ sudo apt-get install openjdk-7-jre 
+  $ sudo update-alternatives --config java
+\end{verbatim}
+Séléctionner la version 7 de Java.\\
+\\
+La configuration se fait au format html au port 8080 (\textit{http://hostname:8080}).\\
+\\
+\includegraphics[height=35mm, width=104mm]{jenkinsfrontpage.png}
+
+\newpage
+\section{Configuration}\label{configuration}
+\paragraph{}
+Différents points sont à paramétrer comme l'authentification, et quelques plugins sont à installer pour améliorer le fonctionnement de Jenkins.\\  
+Cliquer sur \includegraphics[height=5mm, width=25mm]{jenkins_manage_icon.png} pour accéder à la configuration.\\
+
+\subsection{Port}
+Par défaut port est paramétré à 8080. Ce port peut être modifié en éditant le fichier \textit{/etc/default/jenkins}.
+
+\subsection{Plugins}
+\paragraph{}Jenkins dispose d'un nombre important de plugins améliorant significativement son comportement.
+
+\paragraph{}La configuration se fait dans l'interface d'administration \textit{Manage Jenkins / Manage plugin}. Les plugins disponibles en téléchargement se trouvent dans l'onglet \textit{Available}. Le champ \textit{Filter} peut être renseigné pour trouver plus facilement les plugins à installer.
+
+\paragraph{}Les plugins utilisés lors de la compilation "cross platform" sont :\\
+\begin{itemize}
+  \item \href{https://wiki.jenkins-ci.org/display/JENKINS/Green+Balls}{Green balls} : change la couleur 
+de bleu en vert l'icône d'une tache réussite. 
+  \item \href{https://wiki.jenkins-ci.org/display/JENKINS/Mask+Passwords+Plugin}{Mask password} : masque les mots de passe dans les sorties console
+  \item  \href{https://wiki.jenkins-ci.org/display/JENKINS/Build+Pipeline+Plugin}{Build Pipeline Plugin} : permet d'ajouter une vueconcernant l'enchainement de taches. 
+  \item \href{https://wiki.jenkins-ci.org/display/JENKINS/Disk+Usage+Plugin}{Disk Usage Plugin} : enregistre la consommation d'espace disque
+  \item \href{https://wiki.jenkins-ci.org/display/JENKINS/Metrics+Disk+Usage+Plugin}{Metrics Disk Usage Plugin} : donne la consommation d'espace disque par projet
+  \item \href{}{Git Client} : ajoute les commandes du client Git
+  %\item \href{https://wiki.jenkins-ci.org/display/JENKINS/Parameterized+Build}{Parameterized Build} : permet de configurer des paramètres pour des tâches de build, qui peuvent être entrés par l'utilisateur lorsque le build est déclenché, ou depuis une autre tâche.
+%https://github.com/wakaleo/jenkins-the-definitive-guide-book/blob/master/hudsonbook-content-fr/src/main/resources/ch10.xml
+\end{itemize}
+
+\paragraph{}Les plugins à désinstaller sont (onglet \textit{Installed}) : Ant, LDAP, Maven Project, PAM Authentication, SCM API, Subversion, Windows Slaves
+
+\paragraph{}Pensez également à mettre à jour les plugins installés en cliquant sur \textit{Manage Jenkins / Manage plugin}, onglet \textit{Updates}.
+
+ \subsection{Sécurité globale}
+ \paragraph{} Jenkins par défaut authorise quiconque de faire tout et n'importe quoi. Il est utile de graduer le niveau d'accès afin de préserver l'intégrité du système contre les actes de malveillance. Toutefois ce niveau est relativement basique. Visitez par exemple \textit{\url{http://w3af.sourceforge.net}} pour en savoir plus sur la façon de mieux sécuriser votre système.\\
+\\
+Commencez par ajouter un compte  \textit{Manage Jenkins / Manage Users / Create user }
+Activez la sécurité globale en cliquant sur \textit{Manage Jenkins / Configure Global Security}. Cochez \textit{ Project-based Matrix Authorization Strategy}. \\
+Attribuez  tous les droits au compte précédemment créé. Ce compte servira de compte admin.
+Configurez par la même occasion le compte anonymous suivant vos besoins.
+Sauvez les modifications. L'authentification est installée. Déconnectez vous et reconnectez vous. \\
+
+\newpage
+\section{Mise en oeuvre}\label{mise en oeuvre}
+** à developper **
+
+\subsection{Environnement de test}
+environnement de test
+
+\subsection{Récupération du code}
+Récupération du code depuis Git
+
+\subsection{Compilation}
+Compilation
+
+\subsection{Analyse du code}
+Analyse du code
+
+\newpage
+\section{Sauvegarde restauration}
+** à développer **
+Toute la configuration Jenkins se trouve dans le répertoire \textit{/var/lib/jenkins}.
+La sauvegarde de ce répertoire asure une restauration des paramétres, des plugins, et de l'historique nécessaire à Jenkins.\\
+Thinbackup plugin : https://wiki.jenkins-ci.org/display/JENKINS/thinBackup
+
+\section{Nginx}
+\paragraph{}L'installation de Nginx appporte des avantages non négligeable à la version de base : 
+\begin{itemize}
+  \item facile à configurer
+  \item plus rapide et meilleur gestion des ressources
+  \item réécriture des URLs
+  \item peut gérer des connections sécurisées
+  \item meilleur gestion du cache que Jenkins
+\end{itemize}
+C'est pour ces raisons que Nginx est plus approprié en tant que proxy :
+
+\subsection{Installation}
+\begin{verbatim}
+  $ sudo apt-get install nginx
+\end{verbatim}
+
+%Changez le nom des logs pour qu'elles correspondent au numéro des ports :
+
+%\begin{verbatim}
+%  $ sudo vim /etc/nginx/nginx.conf
+%\end{verbatim}
+
+%access_log /var/log/nginx/access.log; -> access_log /var/log/nginx/HOST_PORT_access.log
+%error_log /var/log/nginx/error.log; -> error_log /var/log/nginx/HOST_PORT_error.log
+
+\subsection{proxy}
+\paragraph{}Modifiez le fichier \textit{/etc/nginx/sites-available/default
+}, et changez le numéro de port 80 en attribuant un port non utilisé comme par exemple le port 8000
+\begin{verbatim}
+  listen   8000; ## listen for ipv4; this line is default and implied
+  listen   [::]:8000 default ipv6only=on; ## listen for ipv6
+\end{verbatim}
+
+\paragraph{}Créer le fichier \textit{/etc/nginx/proxy.conf}, et ajouter les lignes suivantes :
+\begin{verbatim}
+  proxy_redirect 	off;
+  proxy_set_header 	Host 		$host;
+  proxy_set_header 	X-Real-IP 	$remote_addr;
+  proxy_set_header 	X-Forwarded-For $proxy_add_x_forwarded_for;
+  client_max_body_size 10m;
+  client_body_buffer_size 128k;
+  proxy_connect_timeout 90;
+  proxy_send_timeout 90;
+  proxy_read_timeout 90;
+  proxy_buffers 32 4k;
+\end{verbatim}
+
+\paragraph{}Créer le fichier \textit{/etc/nginx/sites-enabled/jenkins\_8080\_proxypass}, et ajouter les lignes suivantes :
+\begin{verbatim}
+server {
+  listen 80;
+  server_name localhost;
+  access_log /var/log/nginx/jenkins_8080_proxypass_access.log;
+  error_log /var/log/nginx/jenkins_8080_proxypass_access.log;
+  location / {
+    proxy_pass  http://127.0.0.1:7070/;
+    include /etc/nginx/proxy.conf;
+  }
+}
+\end{verbatim}
+
+Vérifiez la conf : 
+\begin{verbatim}
+  sudo /etc/init.d/nginx configtest
+\end{verbatim}
+
+
+\newpage
+\section{Rest API}\label{Rest API}
+\textit{(En l'état actuel de la documentation, je fais référence à un lien externe. Cette partie sera revue plus tard.)}\\
+Un excellent article explique comment utiliser le \href{http://Mister-tie.fr/blog/2014/03/13/debuter-avec-lapi-rest-de-jenkins/}{REST API de Jenkins}
+
+\end{document}

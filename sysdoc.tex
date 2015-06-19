@@ -34,64 +34,85 @@
 
 \section{Introduction}
 \paragraph{}
-Cette documentation sert à organiser mes différentes recherches et à capitaliser ce savoir pour en faire un référentiel.
+Cette documentation est créée au fil de l'eau en guise de pense bête pour servir de fururs besoins.
 
-\section{chroot}\label{chroot}
-\paragraph{}http://karma-lab.net/magie-chroot
-\paragraph{}Le système fichier d'un *NIX est construit autour d'une racine (le /) sur laquelle les partitions sont ensuite "montées" formant ainsi l'espace de fichier accessible. Cette racine est la référence pour tous les chemins absolus utilisés par un processus lui permettant d'accéder aux fichiers (librairies, configurations, etc.) qui lui sont nécessaires.
-\paragraph{}Ce que l'on sait moins c'est que cette racine est un paramètre du processus qu'il est parfaitement possible de modifier grace à l'utilitaire chroot. Pour quoi faire me direz-vous ? Tout simplement pour faire croire à ce processus que le dossier que nous lui avons arbitrairement fixé comme racine, est l'origine de tous ses chemins absolus.
-\paragraph{}Le cadre d'usage de cette technique est vaste. Elle permet par exemple de lancer des processus critiques dans un dossier isolé du reste du système de sorte à rendre plus difficile (mais pas impossible !) la compromission du reste du système de fichier en cas d'exploitation d'une faille de sécurité. C'est ce que l'on appelle mettre en prison le processus (jail).
-\paragraph{}Elle permet aussi de créer des environnements qui fonctionnent sur des règles différentes du reste du système. Il est ainsi possible de faire tourner une debian au sein d'une mandriva, ou encore un linux en 32bits au sein d'un linux 64 bits. La seule limitation est que le kernel doit être compatible entre les deux distributions.
-\paragraph{}Mais même si cela sonne terriblement comme de la virtualisation il est important de ne pas confondre les deux principes. Le changement de racine n'émule absolument rien. Ce n'est que l'exploitation d'une propriété des processus unix. Chaque processus chrooté accède donc au même matériel que les processus "normaux". De même ils tournent au sein du même kernel et partagent le même espace mémoire. Plus flagrant, les processus lancés dans le cadre d'un changement de racine sont parfaitement visible si l'on exécute une commande ps à partir d'un shell "normal".
-\paragraph{}Et c'est là finalement la grande force du changement de racine. C'est un principe limité mais simple, et qui ne souffre d'aucun problème de performance accompagnant généralement la virtualisation.
+\section{Latex}\label{latex}
 
-\subsection{Construction d'un dossier chrootable}
-\paragraph{}Il y a d'innombrables manière de créer un dossier utilisable pour un changement de racine. Tout dépend au fond du besoin derrière la manipulation. Si l'on désire chrooter un service FTP par exemple, on va s'attacher à ne mettre dans le dossier que les fichiers strictement nécessaires au processus : l'exécutable, ses librairies et ses fichiers de configurations, placé avec soin dans une arborescence qui mime parfaitement ce que l'on trouverait sur une racine réelle. Il existe des utilitaires qui aident à effectuer ce genre de tâche mais ce n'est pas forcement l'approche la plus didactique.
-
-\paragraph{}Pour notre exemple, voyons plutôt comment créer une debian complète dans notre racine de sorte à y placer une pile Apache, PostgreSql et PHP.
-
-\paragraph{}La première chose à faire est d'installer dans un dossier de votre choix une installation de la distribution Debian. Il est possible de faire bêtement une copie de la racine principale, cela marcherait très bien, mais ce serait sûrement très volumineux.
-
-\paragraph{}Heureusement, il existe un outil debian qui fait des miracles debootstrap. Notez que cet outil n'est pas spécifique à Debian et fonctionne aussi très bien sous Mandriva. Nous allons donc installer la commande et la lancer pour installer une wheezy tout neuve.
-
+\subsection{Installation}
+\paragraph{}
+L'installation de Latex est somme toute classique :
 \begin{verbatim}
-  $ sudo apt-get install debootstrap
-  $ debootstrap --include=locales-all wheezy ma_racine http://ftp.fr.debian.org/debian
+ $ sudo apt-get install texlive
+ $ sudo apt-get install texlive-base texlive-binaries texlive-extra-utils \
+	 texlive-font-utils texlive-fonts-recommended texlive-generic-recommended \
+	 texlive-latex-base texlive-latex-extra \
+	 texlive-pictures vim-latexsuite texlive-publishers
+$ sudo apt-get install texlive-base texlive-binaries exlive-extra-utils \
+	 texlive-font-utils texlive-fonts-recommended texlive-generic-recommended \
+	 texlive-latex-base texlive-latex-extra texlive-pictures vim-latexsuite texlive-publishers
+$ sudo apt-get install texlive-lang-english
+$ sudo apt-get install texlive-base
+$ sudo apt-get install  texlive-lang-french
+$ sudo apt-get install xpdf
+$ sudo apt-get install latexmk
 \end{verbatim}
 
-\paragraph{}Le paramètre --include indique à debootstrap des paquets supplémentaires à installer, ici les locales. Suit la version de debian à installer et le dossier dans lequel effectuer les opérations. Si ce dossier n'existe pas il sera créé. Enfin nous avons l'url des paquets debian en france.
+\subsection{Utilisation}
+\paragraph{}
+vim du fichier .lex d'un côté et latexmk -pvc -pdf filename.tex de l'autre pour avoir le rendu
+\paragraph{}
+Enfin texi2pdf doc.tex pour générer définitivement le pdf.
 
-\paragraph{}Et voilà, nous sommes dans notre bash chrooté. Mais que c'est il passé exactement ?
 
+\section{Vim}\label{vim}
+\paragraph{}
+Les lignes suivantes sont ajoutées à ~/.vimrc pour plus de confort visuel
 \begin{verbatim}
-# on met un petit fichier témoin dans la racine
-$ echo "Je suis dans ma racine..." | sudo tee ma_racine/ça_marche.txt > /dev/null
-
-# lancement d'un bash en chroot
-$ chroot ma_racine /bin/bash
-
-# On vérifie que ça a bien marche...
-$root cat /ça_marche.txt
-#Je suis dans ma racine...
+ $ apt-get install vim
+ $ vim ~/.vimrc
+   set cindent
+   set hlsearch
+   set ic
+   set incsearch
+   set number
+   syntax on
+   colorscheme light
 \end{verbatim}
 
+\section{Jenkins}\label{jenkins}
+\paragraph{}
+La config se trouve dans /var/lib/jenkins
 
+\subsection{Configuration}
+\paragraph{}
+Plugins à installer
 \begin{itemize}
-  \item  La commande chroot engendre un processus qui a pour racine la même que celle de son processus parent, généralement le / (mais rien n'empêche de se la jouer matryoshka ;-).
-  \item En interne, chroot appel de la fonction kernel chroot("/ma\_racine"). Le kernel va donc modifier la valeur de la racine pour ce processus et lui associer la valeur /ma\_racine.
-  \item Le processus de chroot, exécute la commande passée en 2nd paramètre, /bin/bash. Comme la racine de chroot a été changée, c'est bien le /bin/bash de la nouvelle racine /ma\_racine qui va être exécuté.
-  \item Cette exécution débouche sur la création d'un processus fils de celui du chroot qui hérite logiquement de cette nouvelle racine.
-  \item Tout ce que /bin/bash lancera par la suite héritera de cette nouvelle racine jusqu'à ce que l'on tape exit qui mettra fin au processus /bin/bash, et par domino à celui du chroot qui a permis son lancement.
+  \item Green Balls Plugin
+  \item Parameterized Trigger Build Plugin 
+  \item Build Pipeline Plugin
 \end{itemize}
-\paragraph{}Ok, le bash c'est bien mignon mais voyons comment aller un peu plus loin.
 
-\subsection{Dossiers spéciaux}
-\paragraph{}Notre debian a besoin d'un plus que les fichiers installés pour fonctionner. En effet pour accéder au matériel il lui faudra les fameux dossier /proc et /sys. Dans un premier temps, nous allons faire cela à la main.
+\subsection{RestAPI}
+\paragraph{}
+Pour lancer un job en le REST API, il faut générer un POST user:token@IP/job/MYJOB/buildWithParameters?PARAMETER=Value
 
-\section{Commandes}
+\section{Divers}\label{divers}
+\paragraph{}
+Les commandes suivantes sont répértoriées en guise de pense bête :
 \begin{itemize}
   \item tee : écrit en sortie ce qu'il a récupéré en entrée : echo "hello" | tee out.txt > /dev/null
+  \item sudo for ever : sudo bash
+  \item echo \$(</etc/fstab) équivaut à un cat
+  \item echo * équivaut à un ls
+  \item arandr pour gérer plusieurs écrans
+  \item lshw pour connaitre les détails du hardware
+  \item evince pour lire les pdf en ligne de commande
 \end{itemize}
 
+\section{Documentation}\label{documentation}
+\paragraph{}
+\begin{itemize}
+  \item http://it-ebooks.info
+\end{itemize}
 
 \end{document}
