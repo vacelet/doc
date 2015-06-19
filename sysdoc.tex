@@ -83,7 +83,21 @@ Les lignes suivantes sont ajoutées à ~/.vimrc pour plus de confort visuel
 \paragraph{}
 La config se trouve dans /var/lib/jenkins
 
-\subsection{Configuration}
+\section{lxc}\label{lxc}
+\subsection{conf réseau}
+\paragraph{}
+
+\subsection{Commandes}
+\section{Jenkins}\label{jenkins}
+\paragraph{}
+lxc-create -n name -t debian
+lxc-start -n name
+lxc-stop -n name
+lxc-attach -n name
+sudo lxc-list
+L'IP du container se trouve dans le proc de du container
+
+
 \paragraph{}
 Plugins à installer
 \begin{itemize}
